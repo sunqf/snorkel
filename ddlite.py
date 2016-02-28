@@ -8,24 +8,31 @@ from nltk.internals import find_jars_within_path
 import numpy as np
 from scipy.sparse import lil_matrix, csr_matrix
 from tree_structs import corenlp_to_xmltree
+from multiprocessing import Process, Queue
+from Queue import Empty
 from treedlib import compile_relation_feature_generator
 
 Sentence = namedtuple('Sentence', 'words, lemmas, poses, dep_parents, dep_labels')
 
-class SentenceParser:
-  def __init__(self):
+class SentenceParser(Process):
+  def __init__(self, doc_queue, parsed_queue):
 
     # Init Porter stemmer
     self.stemmer = PorterStemmer()
 
+    # Ensure that parser is on CLASSPATH
+    PARSER = "%s/parser" % os.getcwd()
+    os.environ['CLASSPATH'] = '$CLASSPATH:{0}:{0}/stanford-parser.jar:{0}/stanford-parser-3.6.0-models.jar'.format(PARSER)
+
     # A hackey fix is needed here to load the Stanford parser correctly
     # Ref: https://gist.github.com/alvations/e1df0ba227e542955a8a
-    PARSER = "%s/parser" % os.getcwd()
-    p = '$CLASSPATH:{0}:{0}/stanford-parser.jar:{0}/stanford-parser-3.6.0-models.jar'.format(PARSER)
-    os.environ["CLASSPATH"] = p
     self.parser = StanfordDependencyParser()
     stanford_dir = self.parser._classpath[0].rpartition('/')[0]
     self.parser._classpath = tuple(find_jars_within_path(stanford_dir))
+
+    self.doc_queue = doc_queue
+    self.parsed_queue = parsed_queue
+    Process.__init__(self)
 
   def _parse_sent(self, words, conll):
     """Parse a single sentence- input as a CONLL-4 array- returning a Sentence object"""
@@ -47,16 +54,53 @@ class SentenceParser:
       dep_parents=[i + offsets[i-1] if i > 0 else 0 for i in map(int, dep_parents)],
       dep_labels=list(dep_labels))
 
-  def parse(self, doc):
+  def run(self):
     """Parse a raw document as a string into a list of sentences"""
-    # Split into sentences & words
-    sents = map(word_tokenize, sent_tokenize(doc))
+    # Get a document from the queue- assume queue is only draining
+    while not self.doc_queue.empty():
+      try:
+        doc = self.doc_queue.get(False)
 
-    # Pass in all sents to parser- note there is a performance gain here
-    # that could surely be exploited more...
-    for i,parse in enumerate(self.parser.parse_sents(sents)):
-      conll = [l.split('\t') for l in list(parse)[0].to_conll(4).split('\n')]
-      yield self._parse_sent(sents[i], conll)   
+        # Split into sentences & words
+        sents = map(word_tokenize, sent_tokenize(doc))
+
+        # Pass in all sents to parser- note there is a performance gain here
+        # that could surely be exploited more...
+        parsed_doc = []
+        for i,parse in enumerate(self.parser.parse_sents(sents)):
+          conll = [l.split('\t') for l in list(parse)[0].to_conll(4).split('\n')]
+          parsed_doc.append(self._parse_sent(sents[i], conll))
+
+        self.parsed_queue.put(parsed_doc)
+      except Empty:
+        break
+
+
+def parse_docs_multicore(docs, parallelism=4):
+  """Parse docs in parallel using SentenceParser processes + queues"""
+  doc_queue = Queue()
+  parsed_queue = Queue()
+
+  # Place docs in queue
+  for doc in docs:
+    doc_queue.put(doc)
+
+  # Start worker threads
+  ps = []
+  for i in range(parallelism):
+    p = SentenceParser(doc_queue, parsed_queue)
+    p.start()
+    ps.append(p)
+
+  # Join on workers
+  for p in ps:
+    p.join()
+
+  # Return parsed docs
+  parsed_docs = []
+  while not parsed_queue.empty():
+    parsed_docs.append(parsed_queue.get(False))
+  return parsed_docs
 
 
 class DictionaryMatch:
