@@ -762,7 +762,7 @@ class CandidateModel:
     
   def _plot_accuracy(self, probs, ground_truth):
     x = 0.1 * np.array(range(11))
-    bin_assign = [x[i] for i in np.digitize(probs, x)]
+    bin_assign = [x[i] for i in np.digitize(probs - 1e-8, x)]
     correct = ((2*(probs >= 0.5) - 1) == ground_truth)
     correct_prob = np.array([np.mean(correct[bin_assign == p]) for p in x])
     xc = x[np.isfinite(correct_prob)]
