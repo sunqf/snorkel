@@ -52,8 +52,10 @@ lfs.extend([lf_p_1, lf_p_2, lf_p_3, lf_p_4])
 
 prog_5 = re.compile(r"\{\{G\}\}(.*)(whereas|however|not)(.*)\{\{P\}\}")
 prog_6 = re.compile(r"\{\{P\}\}(.*)(whereas|however|not)(.*)\{\{G\}\}")
-prog_7 = re.compile(r"\{\{G\}\}(.*)_(.*)_(.*)\{\{P\}\}")
-prog_8 = re.compile(r"\{\{P\}\}(.*)_(.*)_(.*)\{\{G\}\}")
+prog_7 = re.compile(r"\{\{G\}\}(.*)not(.*)cause(.*)\{\{P\}\}")
+prog_8 = re.compile(r"\{\{P\}\}(.*)not(.*)cause(.*)\{\{G\}\}")
+prog_9 = re.compile(r"unlikely(.*)\{\{G\}\}(.*)\{\{P\}\}")
+prog_10 = re.compile(r"\{\{P\}\}(.*)not due to(.*)\{\{G\}\}")
 
 def lf_long(c):
     return -1 if np.abs(span_len(c)) > 25 else 0
@@ -70,11 +72,15 @@ def lf_x(c):
 lfs.extend([lf_long, lf_protein, lf_express, lf_all, lf_aut, lf_x])    
     
 def lf_p_5(c):
-    return 1 if prog_5.search(c.tagged_sent) else 0
+    return -1 if prog_5.search(c.tagged_sent) else 0
 def lf_p_6(c):
-    return 1 if prog_6.search(c.tagged_sent) else 0
+    return -1 if prog_6.search(c.tagged_sent) else 0
 def lf_p_7(c):
-    return 1 if prog_7.search(c.tagged_sent) else 0
+    return -1 if prog_7.search(c.tagged_sent) else 0
 def lf_p_8(c):
-    return 1 if prog_8.search(c.tagged_sent) else 0 
+    return -1 if prog_8.search(c.tagged_sent) else 0
+def lf_p_9(c):
+    return -1 if prog_9.search(c.tagged_sent) else 0
+def lf_p_10(c):
+    return -1 if prog_10.search(c.tagged_sent) else 0 
 lfs.extend([lf_p_5, lf_p_6, lf_p_7, lf_p_8])  
