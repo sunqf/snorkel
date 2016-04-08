@@ -28,8 +28,9 @@ class SentenceParser:
         self.port = 12345
         loc = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'parser')
         cmd = ['java -Xmx4g -cp "%s/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer --port %d > /dev/null' % (loc, self.port)]
-        self.server_pid = Popen(cmd, shell=True).pid
-        atexit.register(self._kill_pserver)
+        self.server_pid = Popen(cmd, shell=True, preexec_fn=os.setsid).pid
+        for sig in [signal.SIGABRT, signal.SIGINT, signal.SIGTERM]:
+          signal.signal(sig, self._kill_pserver)
         self.endpoint = 'http://127.0.0.1:%d/?properties={"annotators": "tokenize,ssplit,pos,lemma,depparse", "outputFormat": "json"}' % self.port
 
         # Following enables retries to cope with CoreNLP server boot-up latency
@@ -45,9 +46,9 @@ class SentenceParser:
         self.requests_session.mount('http://', HTTPAdapter(max_retries=retries))
 
 
-    def _kill_pserver(self):
+    def _kill_pserver(self, *args):
         if self.server_pid is not None:
-            os.kill(self.server_pid, signal.SIGTERM)
+            os.killpg(os.getpgid(self.server_pid), signal.SIGTERM)
 
     def parse(self, doc, doc_id=None):
         """Parse a raw document as a string into a list of sentences"""
