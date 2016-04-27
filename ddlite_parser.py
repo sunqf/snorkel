@@ -29,7 +29,7 @@ class SentenceParser:
         self.port = 12345
         loc = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'parser')
         cmd = ['java -Xmx4g -cp "%s/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer --port %d > /dev/null' % (loc, self.port)]
-        self.server_pid = Popen(cmd, shell=True).pid
+        self.server_pid = Popen(cmd, shell=True, preexec_fn=os.setsid).pid
         atexit.register(self._kill_pserver)
         self.endpoint = 'http://127.0.0.1:%d/?properties={"annotators": "tokenize,ssplit,pos,lemma,depparse", "outputFormat": "json"}' % self.port
 
@@ -49,9 +49,9 @@ class SentenceParser:
     def _kill_pserver(self):
         if self.server_pid is not None:
             try:
-              os.kill(self.server_pid, signal.SIGTERM)
+              os.killpg(os.getpgid(self.server_pid), signal.SIGTERM)
             except:
-              sys.stderr.write('Could not kill CoreNLP server. Might already got killt...\n')
+              sys.stderr.write('Could not kill CoreNLP server...\n')
 
     def parse(self, doc, doc_id=None):
         """Parse a raw document as a string into a list of sentences"""
