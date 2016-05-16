@@ -1,7 +1,6 @@
 # Base Python
 import cPickle, json, os, sys, warnings
 from collections import defaultdict, OrderedDict
-import lxml.etree as et
 
 # Scientific modules
 import numpy as np
@@ -11,31 +10,51 @@ warnings.filterwarnings("ignore", module="matplotlib")
 import matplotlib.pyplot as plt
 import scipy.sparse as sparse
 
-# Feature modules
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), 
-                             'treedlib'))
-from treedlib import compile_relation_feature_generator
-from tree_structs import corenlp_to_xmltree, XMLTree
-from ddlite_entity_features import *
-
-# ddlite parsers
-from ddlite_parser import *
-
-# ddlite matchers
-from ddlite_matcher import *
-
-# ddlite mindtagger
-from ddlite_mindtagger import *
-
 
 ####################################################################
 ############################ ALGORITHMS ############################
 #################################################################### 
 
-#
-# Logistic regression algs
-# Ported from Chris's Julia notebook...
-#
+"""
+We will first consider the *pipelined* approach, consisting of stages:
+
+1. Learn weights theta, parameterizing the generative model of
+  training set creation defined by the LFs (and LF dependencies)
+
+2. Learn the weights w of our model (log. reg. here), using
+  noise-aware ERM
+
+STAGE 1:
+
+We consider a vector of sufficient statistics for our model
+h(X, Y), comprising: 
+
+ Independent factors:
+  * x_i * Y     -- E[x_i*Y] is the accuracy
+  * x_i^2       -- E[x_i^2] is the coverage
+  * x_i
+  * x_i^2 * Y
+  * Y
+ 
+ Dependency factors:
+  * -1{x_i != x_j}                 -- Similar(i,j)
+  * 1{x_i*Y == -1 and x_j*Y == 1}  -- Fixes(i,j)
+  * 1{x_i*Y == 1 and x_j*Y == 1}   -- Reinforces(i,j)
+  * -1{x_i != 0 and x_j != 0}      -- Excludes(i,j)
+
+NOTE: Other formulations that have class-specific acc. possible,
+can add this later...
+
+We consider the maximum-entropy family determined by these sufficient
+statistics:
+P(X,Y;\theta) = Z(\theta)^{-1}\exp(\theta^T h(X,Y))
+
+We will then learn the maximum-likelihood estimator \theta_{MLE}
+using SGD:
+\grad_theta = E[h(X,Y)|X] - E[h(X,Y)]
+"""
+
+
 def log_odds(p):
   """This is the logit function"""
   return np.log(p / (1.0 - p))
