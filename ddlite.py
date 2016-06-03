@@ -17,6 +17,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),
 from treedlib import compile_relation_feature_generator
 from tree_structs import corenlp_to_xmltree, XMLTree
 from ddlite_entity_features import *
+from ddlite_postgres import *
 
 # ddlite parsers
 from ddlite_parser import *
@@ -29,6 +30,7 @@ from ddlite_mindtagger import *
 
 # ddlite learning
 from ddlite_learning import learn_elasticnet_logreg, odds_to_prob
+
 
 #####################################################################
 ############################ TAGGING UTILS ##########################
