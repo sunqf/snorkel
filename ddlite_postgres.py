@@ -31,6 +31,5 @@ class DatabaseHandler():
 	    
 	    query = "SELECT {} FROM {} s, (SELECT doc_id as document_id FROM document_ids ORDER BY RANDOM() LIMIT {}) d where d.document_id = s.doc_id".format(", ".join(attribute_list), table, count)
 	    cur.execute(query)
-	    print cur
 	    return [split_arrays_if_necessary(Sentence(*row)) for row in cur]
 
