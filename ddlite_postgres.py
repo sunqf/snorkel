@@ -3,7 +3,6 @@ import psycopg2
 from ddlite_parser import *
 
 def split_arrays_if_necessary(sentence):
-	    print sentence
             for property_ in ['words', 'lemmas', 'poses', 'dep_parents',
                               'dep_labels', 'token_idxs']:
                 property_value = getattr(sentence, property_, "")
