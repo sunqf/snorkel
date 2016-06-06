@@ -1,14 +1,22 @@
 import ConfigParser
 import psycopg2
+import psycopg2.extensions
+psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
+psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
+
 from ddlite_parser import *
 
 def split_arrays_if_necessary(sentence):
-            for property_ in ['words', 'lemmas', 'poses', 'dep_parents',
-                              'dep_labels', 'token_idxs']:
-                property_value = getattr(sentence, property_, "")
-                if type(property_value) is str:
-                    sentence = sentence._replace(**{property_: property_value.split("|^|")})
-            return sentence
+    for property_ in ['words', 'lemmas', 'poses', 'dep_parents',
+                      'dep_labels', 'token_idxs']:
+        property_value = getattr(sentence, property_, "")
+        if isinstance(property_value, basestring):
+            sentence = sentence._replace(**{property_: property_value.split(u'|^|')})
+        elif type(property_value) is int:
+            sentence = sentence._replace(**{property_: [property_value]})
+        elif type(property_value) is not list:
+            sentences = sentence._replace(**{property_: list(property_value)})
+    return sentence
 
 class DatabaseHandler():
 	dbname = dbuser = dbpass = dbhost = dbport = ''	
