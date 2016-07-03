@@ -30,13 +30,26 @@ class DatabaseHandler():
 		self.dbhost = config.get('Connection','dbhost')
 		self.dbport = config.get('Connection','dbport')
 
-	def get_random_sentences(self,attribute_list=['words', 'lemmas', 'poses', 'dep_parents', 'dep_paths','sent_id', 'doc_id', 'replace(words, \'|^|\', \' \')', '0', 'section_id'], table="sentences_input", count=100):
+	def get_random_sentences(self,attribute_list=['words', 'lemmas', 'poses', 'dep_parents', 'dep_paths','sent_id', 'doc_id', 'replace(words, \'|^|\', \' \')', '0', 'section_id'], table="pval_sentences", count=100):
 	    conn = psycopg2.connect(database=self.dbname, user=self.dbuser, password=self.dbpass,
 				    host=self.dbhost, port=self.dbport)
 
 	    cur = conn.cursor()
-	    
-	    query = "SELECT {} FROM {} s, (SELECT doc_id as document_id FROM document_ids ORDER BY RANDOM() LIMIT {}) d where d.document_id = s.doc_id".format(", ".join(attribute_list), table, count)
+	    query = "SELECT {} FROM {} s ORDER BY RANDOM() LIMIT {}".format(", ".join(attribute_list), table, count)
 	    cur.execute(query)
 	    return [split_arrays_if_necessary(Sentence(*row)) for row in cur]
+
+	def get_doc_keywords(self):
+	    conn = psycopg2.connect(database=self.dbname, user=self.dbuser, password=self.dbpass,
+                                    host=self.dbhost, port=self.dbport)
+
+            cur = conn.cursor()
+	    query = "SELECT doc_id, keyword FROM document_keywords"
+            cur.execute(query)
+	    keyword_dict = {}
+	    for doc_id, keyword in cur:
+		if doc_id not in keyword_dict:
+			keyword_dict[doc_id] = []
+		keyword_dict[doc_id].append(keyword)
+            return keyword_dict
 
