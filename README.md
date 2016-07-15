@@ -1,5 +1,7 @@
 # Snorkel
 
+### _This branch is the stable copy of v0.2 as of 7/15/2016_
+
 ### _Formerly DDLite, in transition!_
 
 [![Build Status](https://travis-ci.org/HazyResearch/ddlite.svg?branch=master)](https://travis-ci.org/HazyResearch/ddlite)
